@@ -1,0 +1,8 @@
+#bash_aliases for Gregory GERARD
+PS1='${debian_chroot:+($debian_chroot)}\[\033[1;31m\]\u@\h\[\033[00m\] \[\033[01;34m\]\w\[\033[00m\] > '
+
+alias l='ls -l --color=auto'
+alias la='ls -la --color=auto'
+alias vi='vim'
+
+alias grep='grep --color=auto'

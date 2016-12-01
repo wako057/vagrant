@@ -24,8 +24,17 @@ echo -e "$ROOT_PASSWD\n$ROOT_PASSWD" | passwd --quiet  &> /dev/null
 useradd -mU -s /bin/bash $DEV_USERNAME 
 echo -e "$DEV_PASSWD\n$DEV_PASSWD" | passwd --quiet $DEV_USERNAME &> /dev/null 
 sed -i -e "s/\#\ set\ bell-style\ none/set\ bell-style\ none/g" /etc/inputrc ## petit goodies pour ne pas avoir de sonnette sur le bash windows
+sed -i -e "s/XKBLAYOUT\=\"us\"/XKBLAYOUT\=\"fr\"/g" /etc/default/keyboard ## clavier FR
+service keyboard-setup restart
 
+# Personnalisation des comptes: bash vim
+cp  /vagrant/misc/hosts /etc/hosts
+cp  /vagrant/misc/bash_aliase_user /home/wister/.bash_aliases
+cp  /vagrant/misc/bashrc_root  /root/.bashrc
+cp  /vagrant/misc/vimrc  /root/.vimrc
+cp  /vagrant/misc/vimrc  /home/wister/.vimrc
 
+# 
 mkdir -p /home/$DEV_USERNAME/.ssh
 cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
 cp /vagrant/ssh/id_rsa /home/$DEV_USERNAME/.ssh/id_rsa
@@ -40,8 +49,12 @@ chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/
 
 # update du systeme
 apt-get update
-apt-get upgrade --quiet --yes
+apt-get install vim
+#apt-get upgrade --quiet --yes
 
+# On authorise le ssh par mot de passe en plus des clef SSH
+sed -i -e "s/\#PasswordAuthentication\ no/PasswordAuthentication\ yes/g" /etc/ssh/sshd_config
+/etc/init.d/ssh restart
 exit 0;
 # installation des package necessaire a la compilation de php
 #apt-get install -y linux-headers-$(uname -r) apache2-mpm-prefork apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git

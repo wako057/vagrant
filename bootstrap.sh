@@ -29,17 +29,19 @@ service keyboard-setup restart
 
 # Personnalisation des comptes: bash vim
 cp  /vagrant/misc/hosts /etc/hosts
-cp  /vagrant/misc/bash_aliase_user /home/wister/.bash_aliases
+# customisation prompt bash + aliases
+cp  /vagrant/misc/bash_aliases_user /home/$DEV_USERNAME/.bash_aliases
 cp  /vagrant/misc/bashrc_root  /root/.bashrc
+# customisation vim 
 cp  /vagrant/misc/vimrc  /root/.vimrc
-cp  /vagrant/misc/vimrc  /home/wister/.vimrc
+cp  /vagrant/misc/vimrc  /home/$DEV_USERNAME/.vimrc
 
 # 
 mkdir -p /home/$DEV_USERNAME/.ssh
-cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
 cp /vagrant/ssh/id_rsa /home/$DEV_USERNAME/.ssh/id_rsa
 cp /vagrant/ssh/id_rsa.pub /home/$DEV_USERNAME/.ssh/id_rsa.pub
 cp /vagrant/ssh/config /home/$DEV_USERNAME/.ssh/config
+cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
 
 chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/.ssh
 chmod 600 /home/$DEV_USERNAME/.ssh/id_rsa*
@@ -49,12 +51,12 @@ chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/
 
 # update du systeme
 apt-get update
-apt-get install vim
-#apt-get upgrade --quiet --yes
-
+apt-get upgrade --quiet --yes
+apt-get install -y vim
 # On authorise le ssh par mot de passe en plus des clef SSH
-sed -i -e "s/\#PasswordAuthentication\ no/PasswordAuthentication\ yes/g" /etc/ssh/sshd_config
+sed -i -e "s/PasswordAuthentication\ no/PasswordAuthentication\ yes/g" /etc/ssh/sshd_config
 /etc/init.d/ssh restart
+
 exit 0;
 # installation des package necessaire a la compilation de php
 #apt-get install -y linux-headers-$(uname -r) apache2-mpm-prefork apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
@@ -74,5 +76,5 @@ done
 cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
 cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
 cp /vagrant/apache2/mods-available/*.conf /etc/apache2/mods-available/
-cp /vagrant/apache2/mime.types  /etc/apache2/
+#cp /vagrant/apache2/mime.types  /etc/apache2/
 

@@ -3,7 +3,10 @@
 DEV_USERNAME='greg'
 DEV_PASSWD='toto'
 ROOT_PASSWD='toto42'
+
+PHP_VERSION='7.0.13'
 PHP_INSTALL_DIR='/usr/local'
+
 MYSQL_ROOT_PASSWD='toto42'
 MYSQL_USER_LOGIN='greg'
 MYSQL_USER_PASSWD='blublu'
@@ -61,13 +64,13 @@ apt-get update
 apt-get upgrade --quiet --yes
 
 # installation des package necessaire a la compilation de php
-apt-get install -y linux-headers-$(uname -r) libapache2-mod-fastcgi apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
+apt-get install -y linux-headers-$(uname -r) apache2-mpm-worker libapache2-mod-fastcgi apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
 
 # bug configure php
 ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h
 
 # Pour le set de la timezon 
-cp  /vagrant/ntp.conf  /etc/ntp.conf
+cp  /vagrant/misc/ntp.conf  /etc/ntp.conf
 echo 'Europe/Paris' > /etc/timezone
 #service ntp restart
 dpkg-reconfigure --frontend noninteractive tzdata
@@ -87,8 +90,72 @@ for vhost in /etc/apache2/sites-enabled/*; do
 done
 
 # copie des vhost / conf
-cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
-cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
+#cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
+#cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
 cp /vagrant/apache2/mods-available/*.conf /etc/apache2/mods-available/
 #cp /vagrant/apache2/mime.types  /etc/apache2/
+
+
+
+###########################################
+############# PHP #########################
+###########################################
+#  on commence l'installation de php
+cd $PHP_INSTALL_DIR
+echo "On recupere les sources php : http://fr2.php.net/distributions/php-${PHP_VERSION}.tar.gz -o php-${PHP_VERSION}.tar.gz"
+curl -s  http://fr2.php.net/distributions/php-${PHP_VERSION}.tar.gz -o php-${PHP_VERSION}.tar.gz
+
+echo "On detar l'archive"
+tar xzf php-${PHP_VERSION}.tar.gz
+cd php-${PHP_VERSION}
+
+echo "On lance le configure Php"
+#./configure --prefix=/usr/local/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=/usr/local/php-$PHP_VERSION/etc --with-config-file-scan-dir=/usr/local/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem
+#./configure --prefix=$PHP_INSTALL_DIR/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc --with-config-file-scan-dir=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem &> /dev/null
+./configure --prefix=$PHP_INSTALL_DIR/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc --with-config-file-scan-dir=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem --enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data
+
+echo "On lance le make"
+make  &> /dev/null
+echo "On lance l'installation"
+make install
+
+ln -s $PHP_INSTALL_DIR/php-$PHP_VERSION $PHP_INSTALL_DIR/php
+ln -s $PHP_INSTALL_DIR/php/etc/ /etc/php
+ln -s $PHP_INSTALL_DIR/php/bin/php /usr/bin/php
+ln -s $PHP_INSTALL_DIR/php/bin/phpize /usr/bin/phpize
+ln -s $PHP_INSTALL_DIR/php/bin/pecl /usr/bin/pecl
+ln -s $PHP_INSTALL_DIR/php/bin/pear /usr/bin/pear
+
+echo "On parametre php"
+cp /usr/local/php-${PHP_VERSION}/sapi/fpm/init.d.php-fpm /etc/init.d/php-fpm
+cp /usr/local/php-${PHP_VERSION}/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf
+mv /etc/php/php-fpm.d/www.conf.default /etc/php/php-fpm.d/www.conf
+chmod +x /etc/init.d/php-fpm
+
+sed -i -e "s/listen\ \=\ 127\.0\.0\.1\:9000/listen\ \=\ \/var\/run\/php\-fpm\.sock/g" /etc/php/php-fpm.d/www.conf
+sed -i -e "s/\;listen\.owner\ \=\ www\-data/listen\.owner\ \=\ www\-data/g" /etc/php/php-fpm.d/www.conf
+sed -i -e "s/\;listen\.group\ \=\ www\-data/listen\.group\ \=\ www\-data/g" /etc/php/php-fpm.d/www.conf
+sed -i -e "s/\;listen\.mode\ \=\ 0660/listen\.mode\ \=\ 0660/g" /etc/php/php-fpm.d/www.conf
+
+
+cd /etc/init.d
+update-rc.d php-fpm defaults
+
+
+# a2dismod mpm_event
+#a2dismod mpm_prefork
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -108,7 +108,7 @@ curl -s  http://fr2.php.net/distributions/php-${PHP_VERSION}.tar.gz -o php-${PHP
 echo "On detar l'archive"
 tar xzf php-${PHP_VERSION}.tar.gz
 cd php-${PHP_VERSION}
-exit 0;
+
 echo "On lance le configure Php"
 #./configure --prefix=/usr/local/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=/usr/local/php-$PHP_VERSION/etc --with-config-file-scan-dir=/usr/local/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem
 #./configure --prefix=$PHP_INSTALL_DIR/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc --with-config-file-scan-dir=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem &> /dev/null

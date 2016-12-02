@@ -96,6 +96,13 @@ cp /vagrant/apache2/mods-available/*.conf /etc/apache2/mods-available/
 #cp /vagrant/apache2/mime.types  /etc/apache2/
 
 
+# on active les site
+for vhost in /vagrant/apache2/mods-available/*; do
+    site=$(echo $(basename $vhost) | sed 's/\.conf//g')
+    a2ensite $site
+done
+
+a2enmod actions fastcgi
 
 ###########################################
 ############# PHP #########################
@@ -140,9 +147,11 @@ sed -i -e "s/\;listen\.mode\ \=\ 0660/listen\.mode\ \=\ 0660/g" /etc/php/php-fpm
 
 cd /etc/init.d
 update-rc.d php-fpm defaults
-
 #a2enmod action
-a2enmod actions fastcgi
+
+
+/etc/init.d/php-fpm restart
+/etc/init.d/apache2 restart
 # a2dismod mpm_event
 #a2dismod mpm_prefork
 

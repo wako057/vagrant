@@ -36,31 +36,45 @@ cp  /vagrant/misc/bashrc_root  /root/.bashrc
 cp  /vagrant/misc/vimrc  /root/.vimrc
 cp  /vagrant/misc/vimrc  /home/$DEV_USERNAME/.vimrc
 
-# 
+# creation  des reporte ssh et alimentation
 mkdir -p /home/$DEV_USERNAME/.ssh
 cp /vagrant/ssh/id_rsa /home/$DEV_USERNAME/.ssh/id_rsa
 cp /vagrant/ssh/id_rsa.pub /home/$DEV_USERNAME/.ssh/id_rsa.pub
 cp /vagrant/ssh/config /home/$DEV_USERNAME/.ssh/config
 cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
 
+# Avec les bon droits
 chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/.ssh
 chmod 600 /home/$DEV_USERNAME/.ssh/id_rsa*
 chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/
-/etc/init.d/ssh restart
 
-
-# update du systeme
-apt-get update
-apt-get upgrade --quiet --yes
-apt-get install -y vim
 # On authorise le ssh par mot de passe en plus des clef SSH
 sed -i -e "s/PasswordAuthentication\ no/PasswordAuthentication\ yes/g" /etc/ssh/sshd_config
 /etc/init.d/ssh restart
 
-exit 0;
-# installation des package necessaire a la compilation de php
-#apt-get install -y linux-headers-$(uname -r) apache2-mpm-prefork apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
+# pour avoir le apache fast-cgi
+sed -i -e "s/deb\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main/deb\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main\ non-free/g" /etc/apt/sources.list
+sed -i -e "s/deb\-src\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main/deb\-src\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main\ non-free/g" /etc/apt/sources.list
 
+# update du systeme
+apt-get update
+apt-get upgrade --quiet --yes
+
+# installation des package necessaire a la compilation de php
+apt-get install -y linux-headers-$(uname -r) libapache2-mod-fastcgi apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
+
+# bug configure php
+ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h
+
+# Pour le set de la timezon 
+cp  /vagrant/ntp.conf  /etc/ntp.conf
+echo 'Europe/Paris' > /etc/timezone
+#service ntp restart
+dpkg-reconfigure --frontend noninteractive tzdata
+
+# group et utilisateur wister et www-data
+usermod -a -G www-data $DEV_USERNAME
+usermod -a -G  $DEV_USERNAME www-data
 
 ###########################################
 ########### APACHE 2.4 ####################

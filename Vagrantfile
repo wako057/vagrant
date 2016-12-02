@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   VAGRANT_ROOT = File.dirname(File.expand_path(__FILE__))
   fsfilewww = File.join(VAGRANT_ROOT, 'fsfilewww.vdi')
   config.vm.provider "virtualbox" do |v|
-	v.gui = true
+	# v.gui = true
     v.name = "dev.wako057.net"
     v.memory = 2048
     v.cpus = 2

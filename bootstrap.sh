@@ -45,7 +45,7 @@ cp /vagrant/ssh/config /home/$DEV_USERNAME/.ssh/config
 chmod 644  /home/$DEV_USERNAME/.ssh/config
 
 /etc/init.d/ssh restart
-#
+#E
 ## update du systeme
 apt-get update
 apt-get upgrade --quiet --yes
@@ -63,7 +63,7 @@ usermod -a -G  $DEV_USERNAME www-data
 ## install tools
 apt-get -y install vim curl  htop git sendmail sendmail-bin sshpass
 ## install apache + php7
-apt-get install -y php7.0 php7.0-cli php7.0-curl php7.0-gd php7.0-gmp php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-opcache php7.0-readline php7.0-soap php7.0-xml php7.0-xsl php7.0-zip php7.0-apcu php7.0-ssh2 libapache2-mod-php7.0 php-pear composer
+apt-get install -y php7.0 php7.0-cli php7.0-curl php7.0-gd php7.0-gmp php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-opcache php7.0-readline php7.0-soap php7.0-xml php7.0-xsl php7.0-zip php7.0-apcu php7.0-ssh2 libapache2-mod-php7.0 php-pear php7.0-mbstring composer
 ## install stats.so
 pear config-set php_ini /etc/php/7.0/cli/php.ini
 

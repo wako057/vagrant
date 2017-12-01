@@ -78,9 +78,9 @@ done
 
 # copie des vhost / conf
 cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
-cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
+#cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
 cp /vagrant/apache2/mods-available/*.conf /etc/apache2/mods-available/
-cp /vagrant/apache2/mime.types  /etc/apache2/
+#cp /vagrant/apache2/mime.types  /etc/apache2/
 cp -r /vagrant/php/7.0/apache2/ /etc/php/7.0
 
 # on active les site
@@ -113,20 +113,21 @@ debconf-set-selections <<< "mysql-server mysql-server/root_password password $MY
 debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $MYSQL_ROOT_PASSWD"
 apt-get install -y mysql-server
 service mysql stop
-mv /var/lib/mysql /data
-chown -R mysql:mysql /data/mysql
+#mv /var/lib/mysql /data
+#chown -R mysql:mysql /data/mysql
 
-cp /etc/mysql/my.cnf /etc/mysql/my.cnf.old
-cp /vagrant/mysql/my.cnf /etc/mysql/my.cnf
+cp /vagrant/mysql/conf.d/* /etc/mysql/conf.d/
+cp /vagrant/mysql/mariadb.conf.d/* /etc/mysql/mariadb.conf.d/
 service mysql start
 
-mysql -u root -p$MYSQL_ROOT_PASSWD < /vagrant/mysql/init_env.sql
+echo "GRANT ALL PRIVILEGES ON *.* TO '$MYSQL_USER_LOGIN'@'%' IDENTIFIED BY '$MYSQL_USER_PASSWD';" |  mysql -u root -p$MYSQL_ROOT_PASSWD
+echo "FLUSH PRIVILEGES;" |  mysql -u root -p$MYSQL_ROOT_PASSWD
 
 
 ###########################################
 ######## PYTHON & PIP & AWS ###############
 ###########################################
-apt-get install -y python-pip python-dev libmysqlclient-dev
+apt-get install -y python-pip python-dev default-libmysqlclient-dev
 pip install MySQL-python
 pip install elasticsearch
 pip install splunk-sdk

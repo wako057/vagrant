@@ -1,171 +1,147 @@
 #!/usr/bin/env bash
 
-DEV_USERNAME='greg'
-DEV_PASSWD='toto'
-ROOT_PASSWD='toto42'
-
-PHP_VERSION='7.0.13'
-PHP_INSTALL_DIR='/usr/local'
-
-MYSQL_ROOT_PASSWD='toto42'
-MYSQL_USER_LOGIN='greg'
-MYSQL_USER_PASSWD='blublu'
-
+DEV_USERNAME='wako'
+DEV_PASSWD='passuser'
+ROOT_PASSWD='passroot'
+MYSQL_ROOT_PASSWD='passmysql'
+MYSQL_USER_LOGIN='wako'
+MYSQL_USER_PASSWD='motdepassesimple'
 
 ###########################################
 ##### SYSTEM GENERAL ######################
 ###########################################
+# Definition des mot de passe utilisateurs -
+echo root:$ROOT_PASSWD | chpasswd
+ # dev user
+adduser --quiet --disabled-password --shell /bin/bash --home /home/$DEV_USERNAME --gecos "$DEV_USERNAME" $DEV_USERNAME
+echo "$DEV_USERNAME:$DEV_PASSWD" | chpasswd
 
-# disque dur /opt
-mkfs.ext4 /dev/sdb
-echo `blkid /dev/sdb | awk '{print$2}' | sed -e 's/"//g'` /opt               ext4    errors=remount-ro 0       1 >> /etc/fstab
-mount /opt
-
-
-# Definition des mot de passe utilisateurs - on fait taire la bell-ring
-echo -e "$ROOT_PASSWD\n$ROOT_PASSWD" | passwd --quiet  &> /dev/null 
-useradd -mU -s /bin/bash $DEV_USERNAME 
-echo -e "$DEV_PASSWD\n$DEV_PASSWD" | passwd --quiet $DEV_USERNAME &> /dev/null 
-sed -i -e "s/\#\ set\ bell-style\ none/set\ bell-style\ none/g" /etc/inputrc ## petit goodies pour ne pas avoir de sonnette sur le bash windows
+# on fait taire la bell-ring - on ajotue le clavier fr
+sed -i -e "s/\#\ set\ bell-style\ none/set\ bell-style\ none/g" /etc/inputrc
 sed -i -e "s/XKBLAYOUT\=\"us\"/XKBLAYOUT\=\"fr\"/g" /etc/default/keyboard ## clavier FR
 service keyboard-setup restart
 
-# Personnalisation des comptes: bash vim
+# Personnalisation des comptes: bash vim authorized_keys
 cp  /vagrant/misc/hosts /etc/hosts
-# customisation prompt bash + aliases
 cp  /vagrant/misc/bash_aliases_user /home/$DEV_USERNAME/.bash_aliases
 cp  /vagrant/misc/bashrc_root  /root/.bashrc
-# customisation vim 
 cp  /vagrant/misc/vimrc  /root/.vimrc
 cp  /vagrant/misc/vimrc  /home/$DEV_USERNAME/.vimrc
 
-# creation  des reporte ssh et alimentation
 mkdir -p /home/$DEV_USERNAME/.ssh
-cp /vagrant/ssh/id_rsa /home/$DEV_USERNAME/.ssh/id_rsa
-cp /vagrant/ssh/id_rsa.pub /home/$DEV_USERNAME/.ssh/id_rsa.pub
-cp /vagrant/ssh/config /home/$DEV_USERNAME/.ssh/config
-cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
 
-# Avec les bon droits
+if [ -f /vagrant/ssh/id_rsa.pub ]; then
+    cp /vagrant/ssh/id_rsa.pub  /home/$DEV_USERNAME/.ssh/authorized_keys
+fi
+cp /vagrant/ssh/sshd_config /etc/ssh/sshd_config
+service ssh restart
+
+
 chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/.ssh
 chmod 600 /home/$DEV_USERNAME/.ssh/id_rsa*
 chown -R $DEV_USERNAME:$DEV_USERNAME /home/$DEV_USERNAME/
 
-# On authorise le ssh par mot de passe en plus des clef SSH
-sed -i -e "s/PasswordAuthentication\ no/PasswordAuthentication\ yes/g" /etc/ssh/sshd_config
+cp /vagrant/ssh/config /home/$DEV_USERNAME/.ssh/config
+chmod 644  /home/$DEV_USERNAME/.ssh/config
+
 /etc/init.d/ssh restart
-
-# pour avoir le apache fast-cgi
-sed -i -e "s/deb\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main/deb\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main\ non-free/g" /etc/apt/sources.list
-sed -i -e "s/deb\-src\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main/deb\-src\ http\:\/\/httpredir\.debian\.org\/debian\ jessie\ main\ non-free/g" /etc/apt/sources.list
-
-# update du systeme
+#
+## update du systeme
 apt-get update
 apt-get upgrade --quiet --yes
-
-# installation des package necessaire a la compilation de php
-apt-get install -y linux-headers-$(uname -r) apache2-mpm-worker libapache2-mod-fastcgi apache2-dev curl vim libxml2-dev libcurl4-openssl-dev libssl-dev libjpeg-dev libpng12-dev libgmp-dev libmcrypt-dev libxslt1-dev libtool chrony htop autoconf git
-
-# bug configure php
-ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h
-
-# Pour le set de la timezon 
+#
+## Pour le set de la timezone
+apt-get install -y ntp ntpdate
 cp  /vagrant/misc/ntp.conf  /etc/ntp.conf
 echo 'Europe/Paris' > /etc/timezone
-#service ntp restart
 dpkg-reconfigure --frontend noninteractive tzdata
-
-# group et utilisateur wister et www-data
+/etc/init.d/ntp restart
+#
+## group et utilisateur
 usermod -a -G www-data $DEV_USERNAME
 usermod -a -G  $DEV_USERNAME www-data
+## install tools
+apt-get -y install vim curl  htop git sendmail sendmail-bin sshpass
+## install apache + php7
+apt-get install -y php7.0 php7.0-cli php7.0-curl php7.0-gd php7.0-gmp php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-opcache php7.0-readline php7.0-soap php7.0-xml php7.0-xsl php7.0-zip php7.0-apcu php7.0-ssh2 libapache2-mod-php7.0 php-pear composer
+## install stats.so
+pear config-set php_ini /etc/php/7.0/cli/php.ini
 
-###########################################
-########### APACHE 2.4 ####################
-###########################################
 
-# on desactive les sites par defaut
+
+###########Config APACHE 2.4/PHP
+mkdir -p /var/www/wako057.net
 for vhost in /etc/apache2/sites-enabled/*; do
     site=$(echo $(basename $vhost) | sed 's/\.conf//g')
     a2dissite $site
 done
 
 # copie des vhost / conf
-#cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
-#cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
+cp /vagrant/apache2/sites-available/*.conf /etc/apache2/sites-available/
+cp /vagrant/apache2/conf-available/*.conf /etc/apache2/conf-available/
 cp /vagrant/apache2/mods-available/*.conf /etc/apache2/mods-available/
-#cp /vagrant/apache2/mime.types  /etc/apache2/
-
+cp /vagrant/apache2/mime.types  /etc/apache2/
+cp -r /vagrant/php/7.0/apache2/ /etc/php/7.0
 
 # on active les site
-for vhost in /vagrant/apache2/mods-available/*; do
+for vhost in /etc/apache2/sites-available/*; do
     site=$(echo $(basename $vhost) | sed 's/\.conf//g')
     a2ensite $site
 done
 
-a2enmod actions fastcgi
+a2dissite 000-default
+# on desactive mpm - on active les modules necessaire
+a2dismod mpm_event
+a2enmod mpm_prefork
+a2enmod actions
+a2enmod rewrite
+a2enmod ssl
+
+# on cree le certificat ssl
+mkdir /etc/apache2/ssl
+cd /etc/apache2/ssl
+openssl genrsa -out dev.wako057.net.key 2048
+echo -e "FR\nParis\nParis\nWako057\n\ndev.wako057.net\n\n\n\n" | openssl req -new -key dev.wako057.net.key -out dev.wako057.net.csr
+openssl x509 -req -days 365 -in dev.wako057.net.csr -signkey dev.wako057.net.key -out dev.wako057.net.pem
+chown -R $DEV_USERNAME:$DEV_USERNAME /var/www/
+apache2ctl restart
 
 ###########################################
-############# PHP #########################
+############# MYSQL #######################
 ###########################################
-#  on commence l'installation de php
-cd $PHP_INSTALL_DIR
-echo "On recupere les sources php : http://fr2.php.net/distributions/php-${PHP_VERSION}.tar.gz -o php-${PHP_VERSION}.tar.gz"
-curl -s  http://fr2.php.net/distributions/php-${PHP_VERSION}.tar.gz -o php-${PHP_VERSION}.tar.gz
+debconf-set-selections <<< "mysql-server mysql-server/root_password password $MYSQL_ROOT_PASSWD"
+debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $MYSQL_ROOT_PASSWD"
+apt-get install -y mysql-server
+service mysql stop
+mv /var/lib/mysql /data
+chown -R mysql:mysql /data/mysql
 
-echo "On detar l'archive"
-tar xzf php-${PHP_VERSION}.tar.gz
-cd php-${PHP_VERSION}
+cp /etc/mysql/my.cnf /etc/mysql/my.cnf.old
+cp /vagrant/mysql/my.cnf /etc/mysql/my.cnf
+service mysql start
 
-echo "On lance le configure Php"
-#./configure --prefix=/usr/local/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=/usr/local/php-$PHP_VERSION/etc --with-config-file-scan-dir=/usr/local/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem
-#./configure --prefix=$PHP_INSTALL_DIR/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc --with-config-file-scan-dir=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-apxs2=/usr/bin/apxs2 --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem &> /dev/null
-./configure --prefix=$PHP_INSTALL_DIR/php-$PHP_VERSION --enable-inline-optimization --disable-debug --with-config-file-path=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc --with-config-file-scan-dir=$PHP_INSTALL_DIR/php-$PHP_VERSION/etc/conf.d --with-gd --with-mcrypt --with-openssl --with-libdir=/lib/x86_64-linux-gnu --with-mysqli=mysqlnd --enable-ftp --enable-sockets --enable-zip --with-jpeg-dir=/usr --with-zlib-dir=/usr --with-curl=/usr --with-libxml-dir=/usr/local/libxml2 --with-gmp --with-xsl=/usr/local/libxslt --enable-soap --enable-mbstring --enable-sysvsem --enable-fpm  --with-fpm-user=www-data --with-fpm-group=www-data
-
-echo "On lance le make"
-make  &> /dev/null
-echo "On lance l'installation"
-make install
-
-ln -s $PHP_INSTALL_DIR/php-$PHP_VERSION $PHP_INSTALL_DIR/php
-ln -s $PHP_INSTALL_DIR/php/etc/ /etc/php
-ln -s $PHP_INSTALL_DIR/php/bin/php /usr/bin/php
-ln -s $PHP_INSTALL_DIR/php/bin/phpize /usr/bin/phpize
-ln -s $PHP_INSTALL_DIR/php/bin/pecl /usr/bin/pecl
-ln -s $PHP_INSTALL_DIR/php/bin/pear /usr/bin/pear
-
-echo "On parametre php"
-cp /usr/local/php-${PHP_VERSION}/sapi/fpm/init.d.php-fpm /etc/init.d/php-fpm
-cp /usr/local/php-${PHP_VERSION}/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf
-mv /etc/php/php-fpm.d/www.conf.default /etc/php/php-fpm.d/www.conf
-chmod +x /etc/init.d/php-fpm
-
-sed -i -e "s/listen\ \=\ 127\.0\.0\.1\:9000/listen\ \=\ \/var\/run\/php\-fpm\.sock/g" /etc/php/php-fpm.d/www.conf
-sed -i -e "s/\;listen\.owner\ \=\ www\-data/listen\.owner\ \=\ www\-data/g" /etc/php/php-fpm.d/www.conf
-sed -i -e "s/\;listen\.group\ \=\ www\-data/listen\.group\ \=\ www\-data/g" /etc/php/php-fpm.d/www.conf
-sed -i -e "s/\;listen\.mode\ \=\ 0660/listen\.mode\ \=\ 0660/g" /etc/php/php-fpm.d/www.conf
+mysql -u root -p$MYSQL_ROOT_PASSWD < /vagrant/mysql/init_env.sql
 
 
-cd /etc/init.d
-update-rc.d php-fpm defaults
-#a2enmod action
+###########################################
+######## PYTHON & PIP & AWS ###############
+###########################################
+apt-get install -y python-pip python-dev libmysqlclient-dev
+pip install MySQL-python
+pip install elasticsearch
+pip install splunk-sdk
 
+cd
+curl -O https://bootstrap.pypa.io/get-pip.py
+python get-pip.py
+pip install awscli
+aws configure set preview.cloudfront true
 
-/etc/init.d/php-fpm restart
-/etc/init.d/apache2 restart
-# a2dismod mpm_event
-#a2dismod mpm_prefork
-
-
-
-
-
-
-
-
-
-
-
-
-
+###########################################
+########## NODEJS #########################
+###########################################
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+apt-get install -y nodejs
+apt-get install -y build-essential
 
 

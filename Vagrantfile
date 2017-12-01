@@ -20,8 +20,8 @@ Vagrant.configure("2") do |config|
   end
   
   config.vm.hostname = "dev.wako057.net"
-  config.vm.box = "debian/jessie64"
-  config.vm.box_version = "8.6.1"
+  config.vm.box = "debian/stretch64"
+  config.vm.box_version = "9.2.0"
   
   config.vm.provision :shell, path: "bootstrap.sh"
 
